@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Optimizer</title>
+</head>
+<body>
+    <h1>Portfolio Optimizer</h1>
+    <form action="/" method="POST">
+        <label for="tickers">Enter Stock Tickers (comma-separated):</label>
+        <input type="text" id="tickers" name="tickers" required>
+        
+        <label for="model">Select Optimization Model:</label>
+        <select id="model" name="model">
+            <option value="Mean-Variance">Mean-Variance</option>
+            <option value="Risk-Parity">Risk-Parity</option>
+            <!-- Add more models here -->
+        </select>
+        
+        <button type="submit">Optimize Portfolio</button>
+    </form>
+</body>
+</html>

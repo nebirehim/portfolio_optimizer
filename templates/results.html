@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Optimization Results</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Optimized Portfolio for {{ tickers }}</h1>
+    <h2>Model: {{ model }}</h2>
+
+    <h3>Asset Weights:</h3>
+    <ul>
+        {% for stock, weight in weights.items() %}
+        <li>{{ stock }}: {{ weight }}%</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Portfolio Weights Chart</h3>
+    <div id="graph"></div>
+    <script>
+        var graphs = { graphJSON , safe };
+        Plotly.newPlot('graph', graphs);
+    </script>
+
+    <a href="/">Go Back</a>
+</body>
+</html>
