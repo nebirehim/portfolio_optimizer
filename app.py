@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+import plotly
 import yfinance as yf
 import riskfolio as rp
 import pandas as pd
@@ -29,6 +30,10 @@ def results():
     try:
         data = yf.download(stock_list, period="1y")['Adj Close']
         
+        # Convert to DataFrame if only one ticker is provided
+        if isinstance(data, pd.Series):
+            data = pd.DataFrame(data)
+
         # Check if data is returned
         if data.empty:
             return f"No data available for the given tickers: {tickers}. Please check the ticker symbols."
@@ -38,10 +43,14 @@ def results():
     # Calculate returns - percentage change in prices
     returns = data.pct_change().dropna()
 
-    # Check if returns DataFrame is not empty
+    # Ensure all data is numeric and there are no 'object' columns
+    returns = returns.apply(pd.to_numeric, errors='coerce')  # Convert non-numeric values to NaN
+    returns = returns.dropna()  # Drop any rows with NaN values
+
+    # Ensure the DataFrame is not empty after cleaning
     if returns.empty or len(returns.columns) < len(stock_list):
         return "Insufficient data to calculate returns. Please check the stock tickers or try with different tickers."
-    
+
     # Create Portfolio object with the returns DataFrame
     port = rp.Portfolio(returns=returns)
     
