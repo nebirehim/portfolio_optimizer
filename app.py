@@ -5,6 +5,7 @@ import riskfolio as rp
 import pandas as pd
 import plotly.graph_objs as go
 import json
+import numpy as np
 
 app = Flask(__name__)
 
@@ -30,9 +31,10 @@ def results():
     try:
         data = yf.download(stock_list, period="1y")['Adj Close']
         
-        # Convert to DataFrame if only one ticker is provided
+        # Handle the case where a single stock is provided
         if isinstance(data, pd.Series):
-            data = pd.DataFrame(data)
+            data = pd.DataFrame(data)  # Convert Series to DataFrame
+            data.columns = [stock_list[0]]  # Rename the column with the stock ticker
 
         # Check if data is returned
         if data.empty:
@@ -47,12 +49,31 @@ def results():
     returns = returns.apply(pd.to_numeric, errors='coerce')  # Convert non-numeric values to NaN
     returns = returns.dropna()  # Drop any rows with NaN values
 
+    # Ensure no infinite or very large values in returns
+    returns.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace infinite values with NaN
+    returns = returns.dropna()  # Drop any rows with NaN after replacing infinite values
+
+    # Strict data validation
+    if returns.empty:
+        return "No valid data available after cleaning. Please check your tickers."
+
+    # Check if all columns are numeric types (float64)
+    print("Returns DataFrame dtypes:")
+    print(returns.dtypes)  # This will show the data types of each column.
+
+    # Ensure all columns are numeric, otherwise raise an error
+    if not all(returns.dtypes == 'float64'):
+        return "Data contains non-numeric columns. Please ensure that all stock data is properly numeric."
+
     # Ensure the DataFrame is not empty after cleaning
     if returns.empty or len(returns.columns) < len(stock_list):
         return "Insufficient data to calculate returns. Please check the stock tickers or try with different tickers."
 
     # Create Portfolio object with the returns DataFrame
-    port = rp.Portfolio(returns=returns)
+    try:
+        port = rp.Portfolio(returns=returns)
+    except Exception as e:
+        return f"An error occurred while creating the portfolio object: {str(e)}"
     
     # Choose the optimization model based on user input
     try:
