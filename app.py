@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for
-import plotly
 import yfinance as yf
 import riskfolio as rp
 import pandas as pd
@@ -23,27 +22,48 @@ def results():
     tickers = request.args.get('tickers')
     model = request.args.get('model')
     
-    # Pull stock data
-    stock_list = tickers.split(',')
-    data = yf.download(stock_list, period="1y")['Adj Close']
+    # Split tickers string into a list of symbols
+    stock_list = [ticker.strip() for ticker in tickers.split(',')]
     
-    # Portfolio Optimization
-    Y = data.pct_change().dropna()
-    port = rp.Portfolio(returns=Y)
+    # Download stock data from Yahoo Finance
+    try:
+        data = yf.download(stock_list, period="1y")['Adj Close']
+        
+        # Check if data is returned
+        if data.empty:
+            return f"No data available for the given tickers: {tickers}. Please check the ticker symbols."
+    except Exception as e:
+        return f"An error occurred while fetching data: {str(e)}"
     
-    # Optimization Models
-    if model == 'Mean-Variance':
-        w = port.optimization(model='Classic', rm='MV', obj='Sharpe', rf=0, l=0)
-    elif model == 'Risk-Parity':
-        w = port.optimization(model='Classic', rm='MV', obj='MinRisk', rf=0, l=0)
-    elif model == 'Max-Sharpe':
-        w = port.optimization(model='Classic', rm='MV', obj='Sharpe', rf=0, l=0)
-    elif model == 'Efficient-Frontier':
-        w = port.efficient_frontier(model='Classic', points=50, rf=0)
+    # Calculate returns - percentage change in prices
+    returns = data.pct_change().dropna()
+
+    # Check if returns DataFrame is not empty
+    if returns.empty or len(returns.columns) < len(stock_list):
+        return "Insufficient data to calculate returns. Please check the stock tickers or try with different tickers."
     
+    # Create Portfolio object with the returns DataFrame
+    port = rp.Portfolio(returns=returns)
+    
+    # Choose the optimization model based on user input
+    try:
+        if model == 'Mean-Variance':
+            w = port.optimization(model='Classic', rm='MV', obj='Sharpe', rf=0, l=0)
+        elif model == 'Risk-Parity':
+            w = port.optimization(model='Classic', rm='MV', obj='MinRisk', rf=0, l=0)
+        elif model == 'Max-Sharpe':
+            w = port.optimization(model='Classic', rm='MV', obj='Sharpe', rf=0, l=0)
+        elif model == 'Efficient-Frontier':
+            w = port.efficient_frontier(model='Classic', points=50, rf=0)
+        else:
+            return "Model not recognized. Please select a valid model."
+    except Exception as e:
+        return f"An error occurred during optimization: {str(e)}"
+
+    # Prepare weights dictionary for output
     weights_dict = w.to_dict()
 
-    # Bar Chart for Portfolio Weights
+    # Plotly Bar Chart for Portfolio Weights
     fig = go.Figure([go.Bar(x=list(weights_dict.keys()), y=list(weights_dict.values()))])
     fig.update_layout(title='Portfolio Weights', xaxis_title='Stocks', yaxis_title='Weights')
     
