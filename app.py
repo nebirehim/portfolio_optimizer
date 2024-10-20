@@ -9,7 +9,7 @@ import numpy as np
 
 app = Flask(__name__)
 
-# Home route
+# Home route to input tickers and select a model
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -18,7 +18,7 @@ def index():
         return redirect(url_for('results', tickers=tickers, model=model))
     return render_template('index.html')
 
-# Results route
+# Results route for optimization
 @app.route('/results')
 def results():
     tickers = request.args.get('tickers')
