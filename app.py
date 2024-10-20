@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+import plotly
 import yfinance as yf
 import riskfolio as rp
 import pandas as pd
@@ -57,17 +58,24 @@ def results():
     returns.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace infinite values with NaN
     returns = returns.dropna()  # Drop any rows with NaN values
 
-    # Strict data validation
+    # Check if the returns data is valid and properly formatted
     if returns.empty or len(returns.columns) < len(stock_list):
         return "Insufficient data to calculate returns. Please check your tickers."
+
+    # Standardize column names and index
+    returns.columns = [ticker for ticker in stock_list]  # Ensure proper column names
+    returns.index = pd.to_datetime(returns.index)  # Ensure proper datetime index
 
     # Check data structure for debugging
     print(f"Shape of returns DataFrame: {returns.shape}")
     print(f"First few rows of returns DataFrame: \n{returns.head()}")
 
+    # Convert returns DataFrame to a numpy array (workaround to avoid object arrays issue)
+    returns_array = returns.to_numpy()
+
     # Attempt to create Portfolio object and optimize
     try:
-        port = rp.Portfolio(returns=returns)
+        port = rp.Portfolio(returns=pd.DataFrame(returns_array, columns=returns.columns))
     except Exception as e:
         return f"Error creating portfolio object: {str(e)}"
 
