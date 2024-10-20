@@ -57,22 +57,19 @@ def results():
     returns.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace infinite values with NaN
     returns = returns.dropna()  # Drop any rows with NaN values
 
-    # Strict data validation - check if all data is numeric and properly structured
+    # Strict data validation
     if returns.empty or len(returns.columns) < len(stock_list):
         return "Insufficient data to calculate returns. Please check your tickers."
 
-    # Check for object dtypes (this is the likely source of the error)
-    if not all(returns.dtypes == 'float64'):
-        # Debugging information to ensure all columns are numeric
-        print(f"Data types of returns DataFrame: {returns.dtypes}")
-        print(f"First few rows of returns DataFrame: \n{returns.head()}")
-        return "Data contains non-numeric columns. Please ensure all stock data is numeric."
+    # Check data structure for debugging
+    print(f"Shape of returns DataFrame: {returns.shape}")
+    print(f"First few rows of returns DataFrame: \n{returns.head()}")
 
-    # Create Portfolio object with the returns DataFrame
+    # Attempt to create Portfolio object and optimize
     try:
         port = rp.Portfolio(returns=returns)
     except Exception as e:
-        return f"An error occurred while creating the portfolio object: {str(e)}"
+        return f"Error creating portfolio object: {str(e)}"
 
     # Choose the optimization model based on user input
     try:
@@ -87,7 +84,11 @@ def results():
         else:
             return "Model not recognized. Please select a valid model."
     except Exception as e:
+        # Capture specific errors during optimization
         return f"An error occurred during optimization: {str(e)}"
+
+    # Check optimization output
+    print(f"Optimized weights: \n{w}")
 
     # Prepare weights dictionary for output
     weights_dict = w.to_dict()
