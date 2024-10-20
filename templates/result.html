@@ -13,10 +13,12 @@
             <th>Asset</th>
             <th>Weight</th>
         </tr>
+        <!-- Loop through each asset and its corresponding weight -->
         {% for asset, weight in weights.items() %}
         <tr>
             <td>{{ asset }}</td>
-            <td>{{ weight | round(4) }}</td>
+            <!-- Ensure weight is numeric before applying the round filter -->
+            <td>{{ weight | float | round(4) }}</td>
         </tr>
         {% endfor %}
     </table>
