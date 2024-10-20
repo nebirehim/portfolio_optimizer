@@ -57,30 +57,43 @@ def plot_portfolio_performance(data, weights):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # Get the user input (tickers, date range, and model)
+        # Get user input
         tickers = request.form.get('tickers').split(',')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         model = request.form.get('model')
 
-        # Fetch stock data (Adjusted Close prices) using yfinance
+        # Fetch stock data
         data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
 
-        # Ensure data is in a DataFrame
-        if not isinstance(data, pd.DataFrame):
-            raise ValueError("Stock data must be a DataFrame.")
+        # Check if the data is a Series (for single ticker) and convert to DataFrame
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
 
-        # Optimize portfolio based on the selected model
-        weights = optimize_portfolio(data, model=model)
+        # Debug: print stock data
+        print("Stock data: ", data)
+
+        # Check if the data is empty
+        if data.empty:
+            return "No data available for the provided tickers or date range."
+
+        # Optimize portfolio
+        try:
+            weights = optimize_portfolio(data, model=model)
+        except ValueError as e:
+            return str(e)  # Show error message if something goes wrong
 
         # Generate portfolio performance plot
         performance_chart = plot_portfolio_performance(data, weights)
 
-        # Send the plot to the result template
+        # Serialize plot for rendering in HTML
         graph_json = json.dumps(performance_chart, cls=plotly.utils.PlotlyJSONEncoder)
+
+        # Render result page with the weights and graph
         return render_template('result.html', weights=weights.to_dict(), graph_data=graph_json)
 
     return render_template('index.html')
+
 
 
 if __name__ == '__main__':
