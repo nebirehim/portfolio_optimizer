@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.graph_objs as go
 import json
 import numpy as np
-import plotly
 
 app = Flask(__name__)
 
@@ -54,16 +53,19 @@ def results():
     # Calculate returns (percentage change in prices)
     returns = data.pct_change().dropna()
 
-    # Ensure returns DataFrame is numeric and clean
+    # Ensure returns DataFrame is fully numeric
     returns.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace infinite values with NaN
     returns = returns.dropna()  # Drop any rows with NaN values
 
-    # Strict data validation
+    # Strict data validation - check if all data is numeric and properly structured
     if returns.empty or len(returns.columns) < len(stock_list):
         return "Insufficient data to calculate returns. Please check your tickers."
 
-    # Check if all columns are numeric types (float64)
+    # Check for object dtypes (this is the likely source of the error)
     if not all(returns.dtypes == 'float64'):
+        # Debugging information to ensure all columns are numeric
+        print(f"Data types of returns DataFrame: {returns.dtypes}")
+        print(f"First few rows of returns DataFrame: \n{returns.head()}")
         return "Data contains non-numeric columns. Please ensure all stock data is numeric."
 
     # Create Portfolio object with the returns DataFrame
