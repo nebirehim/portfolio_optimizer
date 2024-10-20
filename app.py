@@ -10,23 +10,33 @@ app = Flask(__name__)
 
 # Function to optimize portfolio
 def optimize_portfolio(data, model='MV'):
-    # Calculate returns
+    # Ensure the input data is a DataFrame
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("Stock data must be a DataFrame.")
+
+    # Step 1: Calculate the daily returns from the adjusted close prices
     returns = data.pct_change().dropna()
-    
-    # Build Portfolio object
+
+    # Ensure returns is a DataFrame
+    if not isinstance(returns, pd.DataFrame):
+        raise ValueError("Returns must be a DataFrame.")
+
+    # Step 2: Build a Portfolio object with the returns
     port = rp.Portfolio(returns=returns)
-    
-    # Estimate inputs for optimization
+
+    # Step 3: Estimate the inputs for the optimization
     port.assets_stats(method_mu='hist', method_cov='ledoit')
 
-    # Optimization based on selected model
+    # Step 4: Perform the optimization based on the selected model
     if model == 'MV':
         weights = port.optimization(model='Classic', rm='MV', obj='Sharpe')
     elif model == 'CVaR':
         weights = port.optimization(model='Classic', rm='CVaR', obj='Sharpe')
     elif model == 'MAD':
         weights = port.optimization(model='Classic', rm='MAD', obj='Sharpe')
-    
+    else:
+        raise ValueError("Invalid model selected.")
+
     return weights
 
 # Function to plot portfolio performance
@@ -47,22 +57,27 @@ def plot_portfolio_performance(data, weights):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        # Get the user input (tickers, date range, and model)
         tickers = request.form.get('tickers').split(',')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         model = request.form.get('model')
 
-        # Fetch stock data
+        # Fetch stock data (Adjusted Close prices) using yfinance
         data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
-        
-        # Optimize portfolio based on selected model
+
+        # Ensure data is in a DataFrame
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("Stock data must be a DataFrame.")
+
+        # Optimize portfolio based on the selected model
         weights = optimize_portfolio(data, model=model)
 
         # Generate portfolio performance plot
         performance_chart = plot_portfolio_performance(data, weights)
-        
-        # Render results template with data and chart
-        graph_json = json.dumps(performance_chart, cls=plotly.utils.PlotlyJSONEncoder)  # Use Plotly's JSON encoder
+
+        # Send the plot to the result template
+        graph_json = json.dumps(performance_chart, cls=plotly.utils.PlotlyJSONEncoder)
         return render_template('result.html', weights=weights.to_dict(), graph_data=graph_json)
 
     return render_template('index.html')
