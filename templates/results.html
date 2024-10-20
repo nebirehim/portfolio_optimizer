@@ -4,35 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio Optimization Results</title>
-    <!-- Plotly.js for charting -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <h1>Optimization Results</h1>
-
-    <!-- Displaying the tickers and model used -->
-    <p><strong>Tickers:</strong> {{ tickers }}</p>
-    <p><strong>Model:</strong> {{ model }}</p>
-
-    <!-- Displaying the portfolio weights as a list -->
-    <h2>Portfolio Weights:</h2>
-    <ul>
-        {% for stock, weight in weights.items() %}
-            <li>{{ stock }}: {{ weight | round(4) }}</li>
+    <h1>Optimized Portfolio Weights</h1>
+    <table border="1">
+        <tr>
+            <th>Asset</th>
+            <th>Weight</th>
+        </tr>
+        {% for asset, weight in weights.items() %}
+        <tr>
+            <td>{{ asset }}</td>
+            <td>{{ weight | round(4) }}</td>
+        </tr>
         {% endfor %}
-    </ul>
+    </table>
 
-    <!-- Div where the bar chart will be rendered -->
-    <h2>Portfolio Weights Visualization:</h2>
-    <div id="bar-chart"></div>
+    <h2>Portfolio Performance</h2>
+    <div id="performance-chart"></div>
 
-    <!-- JavaScript to render the Plotly chart -->
-    <script type="text/javascript">
-        // Embedding the graphJSON as a safe string to ensure proper JSON parsing
-        var graphData = JSON.parse('{{ graphJSON | tojson }}');
-        
-        // Plotly chart rendering in the 'bar-chart' div
-        Plotly.newPlot('bar-chart', graphData.data, graphData.layout);
+    <script>
+        // Parse the JSON-encoded graph data
+        var graphData = JSON.parse('{{ graph_data | safe }}');
+        Plotly.newPlot('performance-chart', graphData.data, graphData.layout);
     </script>
 </body>
 </html>

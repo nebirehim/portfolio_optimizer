@@ -6,20 +6,26 @@
     <title>Portfolio Optimization</title>
 </head>
 <body>
-    <h1>Portfolio Optimization Tool</h1>
-    <form action="/" method="POST">
-        <label for="tickers">Enter Stock Tickers (comma-separated):</label>
-        <input type="text" id="tickers" name="tickers" placeholder="e.g. AAPL, MSFT, GOOGL" required>
-        <br><br>
-        <label for="model">Select Optimization Model:</label>
+    <h1>Portfolio Optimization</h1>
+
+    <form method="POST">
+        <label for="tickers">Enter Stock Tickers (comma separated):</label><br>
+        <input type="text" id="tickers" name="tickers"><br><br>
+
+        <label for="start_date">Start Date:</label><br>
+        <input type="date" id="start_date" name="start_date"><br><br>
+
+        <label for="end_date">End Date:</label><br>
+        <input type="date" id="end_date" name="end_date"><br><br>
+
+        <label for="model">Select Optimization Model:</label><br>
         <select id="model" name="model">
-            <option value="Mean-Variance">Mean-Variance</option>
-            <option value="Risk-Parity">Risk-Parity</option>
-            <option value="Max-Sharpe">Max-Sharpe</option>
-            <option value="Efficient-Frontier">Efficient Frontier</option>
-        </select>
-        <br><br>
-        <button type="submit">Optimize Portfolio</button>
+            <option value="MV">Mean-Variance (MV)</option>
+            <option value="CVaR">Conditional Value at Risk (CVaR)</option>
+            <option value="MAD">Mean Absolute Deviation (MAD)</option>
+        </select><br><br>
+
+        <input type="submit" value="Optimize Portfolio">
     </form>
 </body>
 </html>

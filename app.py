@@ -1,106 +1,72 @@
-from flask import Flask, render_template, request, redirect, url_for
-import plotly
+from flask import Flask, render_template, request
 import yfinance as yf
 import riskfolio as rp
 import pandas as pd
 import plotly.graph_objs as go
 import json
-import numpy as np
+import plotly
 
 app = Flask(__name__)
 
-# Home route to input tickers and select a model
+# Function to optimize portfolio
+def optimize_portfolio(data, model='MV'):
+    # Calculate returns
+    returns = data.pct_change().dropna()
+    
+    # Build Portfolio object
+    port = rp.Portfolio(returns=returns)
+    
+    # Estimate inputs for optimization
+    port.assets_stats(method_mu='hist', method_cov='ledoit')
+
+    # Optimization based on selected model
+    if model == 'MV':
+        weights = port.optimization(model='Classic', rm='MV', obj='Sharpe')
+    elif model == 'CVaR':
+        weights = port.optimization(model='Classic', rm='CVaR', obj='Sharpe')
+    elif model == 'MAD':
+        weights = port.optimization(model='Classic', rm='MAD', obj='Sharpe')
+    
+    return weights
+
+# Function to plot portfolio performance
+def plot_portfolio_performance(data, weights):
+    returns = data.pct_change().dropna()
+    portfolio_return = (returns * weights).sum(axis=1)
+
+    # Create cumulative return plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=portfolio_return.index, 
+                             y=(1 + portfolio_return).cumprod(), 
+                             mode='lines', name='Portfolio'))
+    fig.update_layout(title='Portfolio Performance',
+                      xaxis_title='Date', yaxis_title='Cumulative Returns')
+    
+    return fig
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        tickers = request.form['tickers']
-        model = request.form['model']
-        return redirect(url_for('results', tickers=tickers, model=model))
+        tickers = request.form.get('tickers').split(',')
+        start_date = request.form.get('start_date')
+        end_date = request.form.get('end_date')
+        model = request.form.get('model')
+
+        # Fetch stock data
+        data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+        
+        # Optimize portfolio based on selected model
+        weights = optimize_portfolio(data, model=model)
+
+        # Generate portfolio performance plot
+        performance_chart = plot_portfolio_performance(data, weights)
+        
+        # Render results template with data and chart
+        graph_json = json.dumps(performance_chart, cls=plotly.utils.PlotlyJSONEncoder)  # Use Plotly's JSON encoder
+        return render_template('result.html', weights=weights.to_dict(), graph_data=graph_json)
+
     return render_template('index.html')
 
-# Results route for optimization
-@app.route('/results')
-def results():
-    tickers = request.args.get('tickers')
-    model = request.args.get('model')
-    
-    # Split tickers string into a list of symbols
-    stock_list = [ticker.strip() for ticker in tickers.split(',')]
-    
-    # Download stock data from Yahoo Finance
-    try:
-        data = yf.download(stock_list, period="1y")['Adj Close']
-        
-        # Handle the case where a single stock is provided
-        if isinstance(data, pd.Series):
-            data = pd.DataFrame(data)  # Convert Series to DataFrame
-            data.columns = [stock_list[0]]  # Rename the column with the stock ticker
-
-        # Check if data is returned
-        if data.empty:
-            return f"No data available for the given tickers: {tickers}. Please check the ticker symbols."
-    except Exception as e:
-        return f"An error occurred while fetching data: {str(e)}"
-    
-    # Calculate returns - percentage change in prices
-    returns = data.pct_change().dropna()
-
-    # Ensure all data is numeric and there are no 'object' columns
-    returns = returns.apply(pd.to_numeric, errors='coerce')  # Convert non-numeric values to NaN
-    returns = returns.dropna()  # Drop any rows with NaN values
-
-    # Ensure no infinite or very large values in returns
-    returns.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace infinite values with NaN
-    returns = returns.dropna()  # Drop any rows with NaN after replacing infinite values
-
-    # Strict data validation
-    if returns.empty:
-        return "No valid data available after cleaning. Please check your tickers."
-
-    # Check if all columns are numeric types (float64)
-    print("Returns DataFrame dtypes:")
-    print(returns.dtypes)  # This will show the data types of each column.
-
-    # Ensure all columns are numeric, otherwise raise an error
-    if not all(returns.dtypes == 'float64'):
-        return "Data contains non-numeric columns. Please ensure that all stock data is properly numeric."
-
-    # Ensure the DataFrame is not empty after cleaning
-    if returns.empty or len(returns.columns) < len(stock_list):
-        return "Insufficient data to calculate returns. Please check the stock tickers or try with different tickers."
-
-    # Create Portfolio object with the returns DataFrame
-    try:
-        port = rp.Portfolio(returns=returns)
-    except Exception as e:
-        return f"An error occurred while creating the portfolio object: {str(e)}"
-    
-    # Choose the optimization model based on user input
-    try:
-        if model == 'Mean-Variance':
-            w = port.optimization(model='Classic', rm='MV', obj='Sharpe', rf=0, l=0)
-        elif model == 'Risk-Parity':
-            w = port.optimization(model='Classic', rm='MV', obj='MinRisk', rf=0, l=0)
-        elif model == 'Max-Sharpe':
-            w = port.optimization(model='Classic', rm='MV', obj='Sharpe', rf=0, l=0)
-        elif model == 'Efficient-Frontier':
-            w = port.efficient_frontier(model='Classic', points=50, rf=0)
-        else:
-            return "Model not recognized. Please select a valid model."
-    except Exception as e:
-        return f"An error occurred during optimization: {str(e)}"
-
-    # Prepare weights dictionary for output
-    weights_dict = w.to_dict()
-
-    # Plotly Bar Chart for Portfolio Weights
-    fig = go.Figure([go.Bar(x=list(weights_dict.keys()), y=list(weights_dict.values()))])
-    fig.update_layout(title='Portfolio Weights', xaxis_title='Stocks', yaxis_title='Weights')
-    
-    # Convert plotly figure to JSON for rendering
-    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-    
-    return render_template('results.html', tickers=tickers, model=model, weights=weights_dict, graphJSON=graphJSON)
 
 if __name__ == '__main__':
     app.run(debug=True)
