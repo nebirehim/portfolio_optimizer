@@ -3,29 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Optimization</title>
+    <title>Portfolio Optimizer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background-color: #f9f9f9; /* Light background for the page */
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            background-color: #ffffff; /* White background for the form */
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #price-graph, #weights-graph {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Portfolio Optimization</h1>
-
-    <form method="POST">
-        <label for="tickers">Enter Stock Tickers (comma separated):</label><br>
-        <input type="text" id="tickers" name="tickers"><br><br>
-
-        <label for="start_date">Start Date:</label><br>
-        <input type="date" id="start_date" name="start_date"><br><br>
-
-        <label for="end_date">End Date:</label><br>
-        <input type="date" id="end_date" name="end_date"><br><br>
-
-        <label for="model">Select Optimization Model:</label><br>
-        <select id="model" name="model">
-            <option value="MV">Mean-Variance (MV)</option>
-            <option value="CVaR">Conditional Value at Risk (CVaR)</option>
-            <option value="MAD">Mean Absolute Deviation (MAD)</option>
-        </select><br><br>
-
-        <input type="submit" value="Optimize Portfolio">
+    <h1>Portfolio Optimization Tool</h1>
+    <form id="portfolio-form">
+        <label for="tickers">Stock Tickers (comma-separated):</label>
+        <input type="text" id="tickers" placeholder="AAPL,MSFT,GOOG" required>
+        <br>
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" required>
+        <br>
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" required>
+        <br>
+        <label for="model">Model:</label>
+        <select id="model">
+            <option value="MV">Mean-Variance</option>
+            <option value="CVaR">CVaR</option>
+            <option value="MAD">Mean Absolute Deviation</option>
+        </select>
+        <br>
+        <button type="submit">Optimize Portfolio</button>
     </form>
+
+    <div id="price-graph"></div>
+    <div id="weights-graph"></div>
+
+    <script>
+        document.getElementById('portfolio-form').onsubmit = async function (e) {
+            e.preventDefault();
+
+            const tickers = document.getElementById('tickers').value.split(',').map(ticker => ticker.trim());
+            const start_date = document.getElementById('start_date').value;
+            const end_date = document.getElementById('end_date').value;
+            const model = document.getElementById('model').value;
+
+            const response = await fetch('/optimize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tickers, start_date, end_date, model })
+            });
+
+            const data = await response.json();
+
+            // Plot price graph
+            Plotly.newPlot('price-graph', JSON.parse(data.price_graph));
+
+            // Plot weights graph (as a pie chart)
+            Plotly.newPlot('weights-graph', JSON.parse(data.weights_graph));
+        };
+    </script>
 </body>
 </html>
