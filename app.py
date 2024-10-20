@@ -46,8 +46,7 @@ def optimize_portfolio(data, model='MV'):
     return weights
 
 # Function to plot performance of the portfolio
-# Function to plot performance of the portfolio
-def plot_performance(data, weights):
+def plot_performance(data, weights, is_dark_mode):
     returns = data.pct_change().dropna()
     portfolio_return = (returns * weights).sum(axis=1)
     cumulative_returns = (1 + portfolio_return).cumprod()
@@ -62,12 +61,15 @@ def plot_performance(data, weights):
 
     # Create price figure
     price_fig = go.Figure(data=price_traces)
-    price_fig.update_layout(title='Stock Prices and Portfolio Cumulative Returns',
-                             xaxis_title='Date',
-                             yaxis_title='Price',
-                             legend_title='Legend',
-                             hovermode='x unified',
-                             plot_bgcolor='rgba(240, 240, 240, 0.9)')  # Light gray background
+    price_fig.update_layout(
+        title='Stock Prices and Portfolio Cumulative Returns',
+        xaxis_title='Date',
+        yaxis_title='Price',
+        legend_title='Legend',
+        hovermode='x unified',
+        plot_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(240, 240, 240, 0.9)',  # Dark mode background
+        paper_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(255, 255, 255, 1)'  # Dark mode paper background
+    )
 
     # Ensure weights are properly formatted for the pie chart
     weights_values = weights.values.flatten().tolist()
@@ -79,12 +81,13 @@ def plot_performance(data, weights):
 
     # Create pie chart for weights
     weights_fig = go.Figure(data=[go.Pie(labels=weights_labels, values=weights_values, hole=0.4)])
-    weights_fig.update_layout(title='Portfolio Weights Allocation',
-                               plot_bgcolor='rgba(240, 240, 240, 0.9)',
-                               paper_bgcolor='rgba(240, 240, 240, 0.9)')
+    weights_fig.update_layout(
+        title='Portfolio Weights Allocation',
+        plot_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(240, 240, 240, 0.9)',  # Dark mode background
+        paper_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(255, 255, 255, 1)'  # Dark mode paper background
+    )
 
     return price_fig, weights_fig
-
 
 @app.route('/')
 def index():
@@ -97,6 +100,7 @@ def optimize():
     start_date = data['start_date']
     end_date = data['end_date']
     model = data['model']
+    is_dark_mode = data['is_dark_mode']  # Get the dark mode status
 
     # Fetch stock data
     stock_data = get_stock_data(tickers, start_date, end_date)
@@ -105,7 +109,7 @@ def optimize():
     weights = optimize_portfolio(stock_data, model)
 
     # Plot performance
-    price_fig, weights_fig = plot_performance(stock_data, weights)
+    price_fig, weights_fig = plot_performance(stock_data, weights, is_dark_mode)
 
     # Convert figures to JSON for rendering
     price_graph_json = json.dumps(price_fig, cls=plotly.utils.PlotlyJSONEncoder)

@@ -7,18 +7,21 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
-            background-color: #f9f9f9;
+            background-color: #f9f9f9; /* Light mode default */
+            color: #333; /* Light mode text color */
             font-family: Arial, sans-serif;
             padding: 20px;
+            transition: background-color 0.5s, color 0.5s;
         }
         h1 {
-            color: #333;
+            color: inherit; /* Use current text color */
         }
         form {
-            background-color: #ffffff;
+            background-color: #ffffff; /* Light mode form background */
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: background-color 0.5s;
         }
         #price-graph, #weights-graph {
             margin-top: 20px;
@@ -27,9 +30,28 @@
             color: red;
             margin-top: 20px;
         }
+        .toggle-container {
+            margin-bottom: 20px;
+        }
+        .dark-mode {
+            background-color: #1e1e1e; /* Dark mode background */
+            color: #f0f0f0; /* Dark mode text color */
+        }
+        .dark-mode form {
+            background-color: #2e2e2e; /* Dark mode form background */
+        }
+        .dark-mode .error {
+            color: #ff5555; /* Dark mode error color */
+        }
     </style>
 </head>
 <body>
+    <div class="toggle-container">
+        <label for="mode-toggle">
+            <input type="checkbox" id="mode-toggle" onchange="toggleMode()"> Dark Mode
+        </label>
+    </div>
+
     <h1>Portfolio Optimization Tool</h1>
     <form id="portfolio-form">
         <label for="tickers">Stock Tickers (comma-separated):</label>
@@ -56,6 +78,18 @@
     <div id="error-message" class="error"></div>
 
     <script>
+        // Function to toggle between light and dark mode
+        function toggleMode() {
+            const body = document.body;
+            const isDarkMode = document.getElementById('mode-toggle').checked;
+
+            if (isDarkMode) {
+                body.classList.add('dark-mode');
+            } else {
+                body.classList.remove('dark-mode');
+            }
+        }
+
         document.getElementById('portfolio-form').onsubmit = async function (e) {
             e.preventDefault();
 
@@ -63,13 +97,14 @@
             const start_date = document.getElementById('start_date').value;
             const end_date = document.getElementById('end_date').value;
             const model = document.getElementById('model').value;
+            const is_dark_mode = document.getElementById('mode-toggle').checked; // Get dark mode status
 
             const response = await fetch('/optimize', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ tickers, start_date, end_date, model })
+                body: JSON.stringify({ tickers, start_date, end_date, model, is_dark_mode }) // Send dark mode status
             });
 
             const data = await response.json();
