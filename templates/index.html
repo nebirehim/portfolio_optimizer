@@ -80,7 +80,22 @@
 
     <script>
         function toggleMode() {
-            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            const graphs = [document.getElementById('price-graph'), 
+                            document.getElementById('weights-graph'), 
+                            document.getElementById('frontier-graph')];
+            graphs.forEach(graph => {
+                if (graph.data) {
+                    // Update the graph background based on current mode
+                    const backgroundColor = isDarkMode ? 'rgba(40, 40, 40, 1)' : 'rgba(240, 240, 240, 0.9)';
+                    const textColor = isDarkMode ? '#FFF' : '#000';
+                    Plotly.relayout(graph, {
+                        'plot_bgcolor': backgroundColor,
+                        'paper_bgcolor': backgroundColor,
+                        'font.color': textColor
+                    });
+                }
+            });
         }
 
         document.getElementById('portfolio-form').onsubmit = async function (e) {
@@ -90,13 +105,14 @@
             const start_date = document.getElementById('start_date').value;
             const end_date = document.getElementById('end_date').value;
             const model = document.getElementById('model').value;
+            const is_dark_mode = document.body.classList.contains('dark-mode'); // Check if dark mode is active
 
             const response = await fetch('/optimize', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ tickers, start_date, end_date, model })
+                body: JSON.stringify({ tickers, start_date, end_date, model, is_dark_mode })
             });
 
             const data = await response.json();

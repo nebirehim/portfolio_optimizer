@@ -47,7 +47,7 @@ def optimize_portfolio(data, model='MV'):
     return weights
 
 # Function to plot performance of the portfolio
-def plot_performance(data, weights):
+def plot_performance(data, weights, is_dark_mode):
     returns = data.pct_change().dropna()
     portfolio_return = (returns * weights).sum(axis=1)
     cumulative_returns = (1 + portfolio_return).cumprod()
@@ -60,6 +60,10 @@ def plot_performance(data, weights):
     # Create cumulative return trace
     price_traces.append(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Cumulative Portfolio Return', line=dict(color='blue', width=2)))
 
+    # Set background color based on the mode
+    background_color = 'rgba(240, 240, 240, 0.9)' if not is_dark_mode else 'rgba(40, 40, 40, 1)'
+    text_color = '#000' if not is_dark_mode else '#FFF'
+
     # Create price figure
     price_fig = go.Figure(data=price_traces)
     price_fig.update_layout(title='Stock Prices and Portfolio Cumulative Returns',
@@ -67,21 +71,20 @@ def plot_performance(data, weights):
                              yaxis_title='Price',
                              legend_title='Legend',
                              hovermode='x unified',
-                             plot_bgcolor='#1e1e1e',  # Dark background
-                             paper_bgcolor='#1e1e1e',  # Dark paper background
-                             font=dict(color='#f0f0f0'))  # Light text color
+                             plot_bgcolor=background_color,
+                             font=dict(color=text_color))
 
     # Create weights pie chart
     weights_fig = go.Figure(data=[go.Pie(labels=weights.index, values=weights.values.flatten(), hole=0.4)])
     weights_fig.update_layout(title='Portfolio Weights Allocation',
-                               plot_bgcolor='#1e1e1e',
-                               paper_bgcolor='#1e1e1e',
-                               font=dict(color='#f0f0f0'))  # Light text color
+                               plot_bgcolor=background_color,
+                               paper_bgcolor=background_color,
+                               font=dict(color=text_color))
 
     return price_fig, weights_fig
 
 # Function to calculate efficient frontier
-def plot_efficient_frontier(data, weights):
+def plot_efficient_frontier(data, weights, is_dark_mode):
     returns = data.pct_change().dropna()
     mean_returns = returns.mean()
     cov_matrix = returns.cov()
@@ -100,17 +103,20 @@ def plot_efficient_frontier(data, weights):
         results[1,i] = portfolio_std_dev
         results[2,i] = (portfolio_return - 0.02) / portfolio_std_dev  # Sharpe ratio
 
+    # Set background color based on the mode
+    background_color = 'rgba(240, 240, 240, 0.9)' if not is_dark_mode else 'rgba(40, 40, 40, 1)'
+    text_color = '#000' if not is_dark_mode else '#FFF'
+
     # Create efficient frontier figure
     frontier_fig = go.Figure()
-    frontier_fig.add_trace(go.Scatter(x=results[1,:], y=results[0,:], mode='markers', 
-                                        marker=dict(color=results[2,:], colorscale='Viridis', showscale=True), 
+    frontier_fig.add_trace(go.Scatter(x=results[1,:], y=results[0,:], mode='markers',
+                                        marker=dict(color=results[2,:], colorscale='Viridis', showscale=True),
                                         text=['Sharpe: ' + str(round(x, 2)) for x in results[2,:]]))
-    frontier_fig.update_layout(title='Efficient Frontier', 
-                                xaxis_title='Standard Deviation', 
+    frontier_fig.update_layout(title='Efficient Frontier',
+                                xaxis_title='Standard Deviation',
                                 yaxis_title='Expected Return',
-                                plot_bgcolor='#1e1e1e',  # Dark background
-                                paper_bgcolor='#1e1e1e',  # Dark paper background
-                                font=dict(color='#f0f0f0'))  # Light text color
+                                plot_bgcolor=background_color,
+                                font=dict(color=text_color))
 
     return frontier_fig
 
@@ -125,6 +131,7 @@ def optimize():
     start_date = data['start_date']
     end_date = data['end_date']
     model = data['model']
+    is_dark_mode = data['is_dark_mode']  # Get dark mode status
 
     try:
         # Fetch stock data
@@ -134,8 +141,8 @@ def optimize():
         weights = optimize_portfolio(stock_data, model)
 
         # Plot performance
-        price_fig, weights_fig = plot_performance(stock_data, weights)
-        frontier_fig = plot_efficient_frontier(stock_data, weights)
+        price_fig, weights_fig = plot_performance(stock_data, weights, is_dark_mode)
+        frontier_fig = plot_efficient_frontier(stock_data, weights, is_dark_mode)
 
         # Convert figures to JSON for rendering
         price_graph_json = json.dumps(price_fig, cls=plotly.utils.PlotlyJSONEncoder)
