@@ -5,6 +5,7 @@ import riskfolio as rp
 import plotly.graph_objs as go
 import json
 import plotly
+import numpy as np
 
 app = Flask(__name__)
 
@@ -46,7 +47,7 @@ def optimize_portfolio(data, model='MV'):
     return weights
 
 # Function to plot performance of the portfolio
-def plot_performance(data, weights, is_dark_mode):
+def plot_performance(data, weights):
     returns = data.pct_change().dropna()
     portfolio_return = (returns * weights).sum(axis=1)
     cumulative_returns = (1 + portfolio_return).cumprod()
@@ -61,33 +62,57 @@ def plot_performance(data, weights, is_dark_mode):
 
     # Create price figure
     price_fig = go.Figure(data=price_traces)
-    price_fig.update_layout(
-        title='Stock Prices and Portfolio Cumulative Returns',
-        xaxis_title='Date',
-        yaxis_title='Price',
-        legend_title='Legend',
-        hovermode='x unified',
-        plot_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(240, 240, 240, 0.9)',  # Dark mode background
-        paper_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(255, 255, 255, 1)'  # Dark mode paper background
-    )
+    price_fig.update_layout(title='Stock Prices and Portfolio Cumulative Returns',
+                             xaxis_title='Date',
+                             yaxis_title='Price',
+                             legend_title='Legend',
+                             hovermode='x unified',
+                             plot_bgcolor='#1e1e1e',  # Dark background
+                             paper_bgcolor='#1e1e1e',  # Dark paper background
+                             font=dict(color='#f0f0f0'))  # Light text color
 
-    # Ensure weights are properly formatted for the pie chart
-    weights_values = weights.values.flatten().tolist()
-    weights_labels = weights.index.tolist()
-
-    # Check for non-zero weights (to avoid empty pie chart)
-    if sum(weights_values) == 0:
-        weights_values = [1] * len(weights_values)  # Temporary fix for displaying empty portfolios
-
-    # Create pie chart for weights
-    weights_fig = go.Figure(data=[go.Pie(labels=weights_labels, values=weights_values, hole=0.4)])
-    weights_fig.update_layout(
-        title='Portfolio Weights Allocation',
-        plot_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(240, 240, 240, 0.9)',  # Dark mode background
-        paper_bgcolor='rgba(0, 0, 0, 0)' if is_dark_mode else 'rgba(255, 255, 255, 1)'  # Dark mode paper background
-    )
+    # Create weights pie chart
+    weights_fig = go.Figure(data=[go.Pie(labels=weights.index, values=weights.values.flatten(), hole=0.4)])
+    weights_fig.update_layout(title='Portfolio Weights Allocation',
+                               plot_bgcolor='#1e1e1e',
+                               paper_bgcolor='#1e1e1e',
+                               font=dict(color='#f0f0f0'))  # Light text color
 
     return price_fig, weights_fig
+
+# Function to calculate efficient frontier
+def plot_efficient_frontier(data, weights):
+    returns = data.pct_change().dropna()
+    mean_returns = returns.mean()
+    cov_matrix = returns.cov()
+
+    # Generate random portfolios
+    num_portfolios = 10000
+    results = np.zeros((3, num_portfolios))
+    for i in range(num_portfolios):
+        weights = np.random.random(len(data.columns))
+        weights /= np.sum(weights)
+
+        portfolio_return = np.dot(weights, mean_returns)
+        portfolio_std_dev = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+
+        results[0,i] = portfolio_return
+        results[1,i] = portfolio_std_dev
+        results[2,i] = (portfolio_return - 0.02) / portfolio_std_dev  # Sharpe ratio
+
+    # Create efficient frontier figure
+    frontier_fig = go.Figure()
+    frontier_fig.add_trace(go.Scatter(x=results[1,:], y=results[0,:], mode='markers', 
+                                        marker=dict(color=results[2,:], colorscale='Viridis', showscale=True), 
+                                        text=['Sharpe: ' + str(round(x, 2)) for x in results[2,:]]))
+    frontier_fig.update_layout(title='Efficient Frontier', 
+                                xaxis_title='Standard Deviation', 
+                                yaxis_title='Expected Return',
+                                plot_bgcolor='#1e1e1e',  # Dark background
+                                paper_bgcolor='#1e1e1e',  # Dark paper background
+                                font=dict(color='#f0f0f0'))  # Light text color
+
+    return frontier_fig
 
 @app.route('/')
 def index():
@@ -100,22 +125,26 @@ def optimize():
     start_date = data['start_date']
     end_date = data['end_date']
     model = data['model']
-    is_dark_mode = data['is_dark_mode']  # Get the dark mode status
 
-    # Fetch stock data
-    stock_data = get_stock_data(tickers, start_date, end_date)
+    try:
+        # Fetch stock data
+        stock_data = get_stock_data(tickers, start_date, end_date)
 
-    # Optimize portfolio
-    weights = optimize_portfolio(stock_data, model)
+        # Optimize portfolio
+        weights = optimize_portfolio(stock_data, model)
 
-    # Plot performance
-    price_fig, weights_fig = plot_performance(stock_data, weights, is_dark_mode)
+        # Plot performance
+        price_fig, weights_fig = plot_performance(stock_data, weights)
+        frontier_fig = plot_efficient_frontier(stock_data, weights)
 
-    # Convert figures to JSON for rendering
-    price_graph_json = json.dumps(price_fig, cls=plotly.utils.PlotlyJSONEncoder)
-    weights_graph_json = json.dumps(weights_fig, cls=plotly.utils.PlotlyJSONEncoder)
+        # Convert figures to JSON for rendering
+        price_graph_json = json.dumps(price_fig, cls=plotly.utils.PlotlyJSONEncoder)
+        weights_graph_json = json.dumps(weights_fig, cls=plotly.utils.PlotlyJSONEncoder)
+        frontier_graph_json = json.dumps(frontier_fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return jsonify(weights=weights.to_dict(), price_graph=price_graph_json, weights_graph=weights_graph_json)
+        return jsonify(weights=weights.to_dict(), price_graph=price_graph_json, weights_graph=weights_graph_json, frontier_graph=frontier_graph_json)
+    except Exception as e:
+        return jsonify(error=str(e)), 400
 
 if __name__ == "__main__":
     app.run(debug=True)

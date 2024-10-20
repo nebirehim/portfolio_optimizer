@@ -23,7 +23,7 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transition: background-color 0.5s;
         }
-        #price-graph, #weights-graph {
+        #price-graph, #weights-graph, #frontier-graph {
             margin-top: 20px;
         }
         .error {
@@ -75,19 +75,12 @@
 
     <div id="price-graph"></div>
     <div id="weights-graph"></div>
+    <div id="frontier-graph"></div>
     <div id="error-message" class="error"></div>
 
     <script>
-        // Function to toggle between light and dark mode
         function toggleMode() {
-            const body = document.body;
-            const isDarkMode = document.getElementById('mode-toggle').checked;
-
-            if (isDarkMode) {
-                body.classList.add('dark-mode');
-            } else {
-                body.classList.remove('dark-mode');
-            }
+            document.body.classList.toggle('dark-mode');
         }
 
         document.getElementById('portfolio-form').onsubmit = async function (e) {
@@ -97,14 +90,13 @@
             const start_date = document.getElementById('start_date').value;
             const end_date = document.getElementById('end_date').value;
             const model = document.getElementById('model').value;
-            const is_dark_mode = document.getElementById('mode-toggle').checked; // Get dark mode status
 
             const response = await fetch('/optimize', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ tickers, start_date, end_date, model, is_dark_mode }) // Send dark mode status
+                body: JSON.stringify({ tickers, start_date, end_date, model })
             });
 
             const data = await response.json();
@@ -123,6 +115,9 @@
 
             // Plot weights pie chart
             Plotly.newPlot('weights-graph', JSON.parse(data.weights_graph));
+
+            // Plot efficient frontier graph
+            Plotly.newPlot('frontier-graph', JSON.parse(data.frontier_graph));
         };
     </script>
 </body>
