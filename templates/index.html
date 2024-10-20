@@ -7,7 +7,7 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
-            background-color: #f9f9f9; /* Light background for the page */
+            background-color: #f9f9f9;
             font-family: Arial, sans-serif;
             padding: 20px;
         }
@@ -15,12 +15,16 @@
             color: #333;
         }
         form {
-            background-color: #ffffff; /* White background for the form */
+            background-color: #ffffff;
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         #price-graph, #weights-graph {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
             margin-top: 20px;
         }
     </style>
@@ -49,6 +53,7 @@
 
     <div id="price-graph"></div>
     <div id="weights-graph"></div>
+    <div id="error-message" class="error"></div>
 
     <script>
         document.getElementById('portfolio-form').onsubmit = async function (e) {
@@ -69,10 +74,19 @@
 
             const data = await response.json();
 
+            // Check for errors in the response
+            if (data.error) {
+                document.getElementById('error-message').innerText = data.error;
+                return;
+            }
+
+            // Clear any previous error messages
+            document.getElementById('error-message').innerText = '';
+
             // Plot price graph
             Plotly.newPlot('price-graph', JSON.parse(data.price_graph));
 
-            // Plot weights graph (as a pie chart)
+            // Plot weights pie chart
             Plotly.newPlot('weights-graph', JSON.parse(data.weights_graph));
         };
     </script>
