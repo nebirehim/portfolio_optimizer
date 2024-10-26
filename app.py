@@ -47,6 +47,7 @@ def optimize_portfolio(data, model='MV'):
     return weights
 
 # Function to plot performance of the portfolio
+# Function to plot performance of the portfolio
 def plot_performance(data, weights, is_dark_mode):
     returns = data.pct_change().dropna()
     portfolio_return = (returns * weights).sum(axis=1)
@@ -83,6 +84,8 @@ def plot_performance(data, weights, is_dark_mode):
 
     return price_fig, weights_fig
 
+
+# Function to calculate efficient frontier
 # Function to calculate efficient frontier
 def plot_efficient_frontier(data, weights, is_dark_mode):
     returns = data.pct_change().dropna()
@@ -119,6 +122,7 @@ def plot_efficient_frontier(data, weights, is_dark_mode):
                                 font=dict(color=text_color))
 
     return frontier_fig
+
 
 @app.route('/')
 def index():

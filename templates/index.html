@@ -57,11 +57,12 @@
         <label for="tickers">Stock Tickers (comma-separated):</label>
         <input type="text" id="tickers" placeholder="AAPL,MSFT,GOOG" required>
         <br>
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" required>
-        <br>
-        <label for="end_date">End Date:</label>
-        <input type="date" id="end_date" required>
+        <label for="date-range">Date Range:</label>
+        <select id="date-range" required>
+            <option value="1y">Last 1 Year</option>
+            <option value="5y">Last 5 Years</option>
+            <option value="max">Maximum Available Data</option>
+        </select>
         <br>
         <label for="model">Model:</label>
         <select id="model">
@@ -73,9 +74,24 @@
         <button type="submit">Optimize Portfolio</button>
     </form>
 
+    <!-- Title for Price Graph -->
+    <div id="price-graph-title">
+        <h2>Stock Prices and Portfolio Cumulative Returns</h2>
+    </div>
     <div id="price-graph"></div>
+
+    <!-- Title for Weights Graph -->
+    <div id="weights-graph-title">
+        <h2>Portfolio Weights Allocation</h2>
+    </div>
     <div id="weights-graph"></div>
+
+    <!-- Title for Efficient Frontier Graph -->
+    <div id="frontier-graph-title">
+        <h2>Efficient Frontier</h2>
+    </div>
     <div id="frontier-graph"></div>
+    
     <div id="error-message" class="error"></div>
 
     <script>
@@ -102,17 +118,36 @@
             e.preventDefault();
 
             const tickers = document.getElementById('tickers').value.split(',').map(ticker => ticker.trim());
-            const start_date = document.getElementById('start_date').value;
-            const end_date = document.getElementById('end_date').value;
+            const dateRange = document.getElementById('date-range').value; // Get the selected date range
             const model = document.getElementById('model').value;
             const is_dark_mode = document.body.classList.contains('dark-mode'); // Check if dark mode is active
+
+            // Calculate the start and end dates based on the selected range
+            const endDate = new Date();
+            let startDate;
+
+            switch (dateRange) {
+                case '1y':
+                    startDate = new Date();
+                    startDate.setFullYear(endDate.getFullYear() - 1);
+                    break;
+                case '5y':
+                    startDate = new Date();
+                    startDate.setFullYear(endDate.getFullYear() - 5);
+                    break;
+                case 'max':
+                    startDate = '1900-01-01'; // Use a very old date for maximum data
+                    break;
+                default:
+                    startDate = endDate; // Fallback in case of an unexpected value
+            }
 
             const response = await fetch('/optimize', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ tickers, start_date, end_date, model, is_dark_mode })
+                body: JSON.stringify({ tickers, start_date: startDate.toISOString().split('T')[0], end_date: endDate.toISOString().split('T')[0], model, is_dark_mode })
             });
 
             const data = await response.json();
