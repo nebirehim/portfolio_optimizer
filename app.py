@@ -26,6 +26,7 @@ def get_stock_data(tickers, start_date, end_date):
 
 
 # Function to optimize portfolio using Riskfolio-Lib
+# Function to optimize portfolio using Riskfolio-Lib
 def optimize_portfolio(data, model='MV'):
     if not isinstance(data, pd.DataFrame):
         raise ValueError("Stock data must be a DataFrame.")
@@ -44,10 +45,15 @@ def optimize_portfolio(data, model='MV'):
         weights = port.optimization(model='Classic', rm='CVaR', obj='Sharpe')
     elif model == 'MAD':
         weights = port.optimization(model='Classic', rm='MAD', obj='Sharpe')
+    elif model == 'ERC':
+        weights = port.optimization(model='Classic', rm='MV', obj='MinRisk')  # Equal Risk Contribution
+    elif model == 'RP':
+        weights = port.optimization(model='Classic', rm='MV', obj='MinRisk')  # Risk Parity
     else:
         raise ValueError("Invalid model selected.")
     
     return weights
+
 
 # Function to plot performance of the portfolio
 # Function to plot performance of the portfolio
