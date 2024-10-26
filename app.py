@@ -60,15 +60,12 @@ def optimize_portfolio(data, model='MV'):
 def plot_performance(data, weights, is_dark_mode):
     returns = data.pct_change().dropna()
     portfolio_return = (returns * weights).sum(axis=1)
-    cumulative_returns = (1 + portfolio_return).cumprod()
 
     # Create price trend traces
     price_traces = []
     for ticker in data.columns:
         price_traces.append(go.Scatter(x=data.index, y=data[ticker], mode='lines', name=f'{ticker} Price'))
 
-    # Create cumulative return trace
-    price_traces.append(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Cumulative Portfolio Return', line=dict(color='blue', width=2)))
 
     # Set background color based on the mode
     background_color = 'rgba(240, 240, 240, 0.9)' if not is_dark_mode else 'rgba(40, 40, 40, 1)'
