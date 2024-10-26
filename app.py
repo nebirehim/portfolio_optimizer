@@ -10,8 +10,10 @@ import numpy as np
 app = Flask(__name__)
 
 # Function to fetch stock data from Yahoo Finance
+# Function to fetch stock data from Yahoo Finance
 def get_stock_data(tickers, start_date, end_date):
-    stock_data = yf.download(tickers, start=start_date, end=end_date)
+    # If start_date is None, omit it to get max available data
+    stock_data = yf.download(tickers, start=start_date, end=end_date if start_date else None)
     stock_data = stock_data['Adj Close']
     
     if isinstance(stock_data, pd.Series):
@@ -21,6 +23,7 @@ def get_stock_data(tickers, start_date, end_date):
         raise ValueError("No stock data was returned. Please check the tickers and date range.")
     
     return stock_data
+
 
 # Function to optimize portfolio using Riskfolio-Lib
 def optimize_portfolio(data, model='MV'):

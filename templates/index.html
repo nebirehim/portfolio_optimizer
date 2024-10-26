@@ -57,8 +57,8 @@
         <label for="tickers">Stock Tickers (comma-separated):</label>
         <input type="text" id="tickers" placeholder="AAPL,MSFT,GOOG" required>
         <br>
-        <label for="date-range">Date Range:</label>
-        <select id="date-range" required>
+        <label for="date-range">Select Date Range:</label>
+        <select id="date-range">
             <option value="1y">Last 1 Year</option>
             <option value="5y">Last 5 Years</option>
             <option value="max">Maximum Available Data</option>
@@ -74,24 +74,9 @@
         <button type="submit">Optimize Portfolio</button>
     </form>
 
-    <!-- Title for Price Graph -->
-    <div id="price-graph-title">
-        <h2>Stock Prices and Portfolio Cumulative Returns</h2>
-    </div>
     <div id="price-graph"></div>
-
-    <!-- Title for Weights Graph -->
-    <div id="weights-graph-title">
-        <h2>Portfolio Weights Allocation</h2>
-    </div>
     <div id="weights-graph"></div>
-
-    <!-- Title for Efficient Frontier Graph -->
-    <div id="frontier-graph-title">
-        <h2>Efficient Frontier</h2>
-    </div>
     <div id="frontier-graph"></div>
-    
     <div id="error-message" class="error"></div>
 
     <script>
@@ -126,20 +111,14 @@
             const endDate = new Date();
             let startDate;
 
-            switch (dateRange) {
-                case '1y':
-                    startDate = new Date();
-                    startDate.setFullYear(endDate.getFullYear() - 1);
-                    break;
-                case '5y':
-                    startDate = new Date();
-                    startDate.setFullYear(endDate.getFullYear() - 5);
-                    break;
-                case 'max':
-                    startDate = '1900-01-01'; // Use a very old date for maximum data
-                    break;
-                default:
-                    startDate = endDate; // Fallback in case of an unexpected value
+            if (dateRange === '1y') {
+                startDate = new Date();
+                startDate.setFullYear(endDate.getFullYear() - 1);
+            } else if (dateRange === '5y') {
+                startDate = new Date();
+                startDate.setFullYear(endDate.getFullYear() - 5);
+            } else if (dateRange === 'max') {
+                startDate = null; // No start date needed for maximum available data
             }
 
             const response = await fetch('/optimize', {
@@ -147,7 +126,13 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ tickers, start_date: startDate.toISOString().split('T')[0], end_date: endDate.toISOString().split('T')[0], model, is_dark_mode })
+                body: JSON.stringify({
+                    tickers,
+                    start_date: startDate ? startDate.toISOString().split('T')[0] : null, // Send null if max
+                    end_date: endDate.toISOString().split('T')[0],
+                    model,
+                    is_dark_mode
+                })
             });
 
             const data = await response.json();
