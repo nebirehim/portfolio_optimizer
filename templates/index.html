@@ -66,8 +66,11 @@
     <button id="toggle-dark-mode">Toggle Dark Mode</button>
 
     <div class="input-section">
-        <label for="tickers-input">Enter Tickers (comma-separated):</label>
-        <input type="text" id="tickers-input" placeholder="AAPL, MSFT, TSLA">
+        <label for="tickers-input">Select Stocks:</label>
+        <select id="tickers-dropdown" multiple>
+            <!-- Dynamic tickers will be loaded here -->
+        </select>
+        <small>Hold `Ctrl` or `Cmd` to select multiple stocks.</small>
 
         <label>Select Date Range:</label>
         <div class="date-options">
@@ -164,7 +167,8 @@
     });
 
     document.getElementById('optimize-btn').addEventListener('click', async function () {
-        const tickers = document.getElementById('tickers-input').value.split(',').map(t => t.trim());
+        const selectedOptions = document.getElementById('tickers-dropdown').selectedOptions;
+        const tickers = Array.from(selectedOptions).map(opt => opt.value);
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
         const model = document.querySelector('input[name="model"]:checked').value;
@@ -195,9 +199,6 @@
             const weightsGraph = JSON.parse(result.weights_graph);
             const frontierGraph = JSON.parse(result.frontier_graph);
 
-            // Add portfolio model names to frontier graph
-            frontierGraph.layout.annotations = result.portfolio_annotations;
-
             // Render graphs
             Plotly.newPlot('price-graph', priceGraph.data, priceGraph.layout);
             Plotly.newPlot('weights-graph', weightsGraph.data, weightsGraph.layout);
@@ -216,6 +217,22 @@
         }
     });
 
+    async function loadTickers() {
+        try {
+            const response = await fetch('/get_sp500_tickers');
+            const { tickers } = await response.json();
+            const dropdown = document.getElementById('tickers-dropdown');
+            tickers.forEach(ticker => {
+                const option = document.createElement('option');
+                option.value = ticker;
+                option.textContent = ticker;
+                dropdown.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading tickers:', error);
+        }
+    }
+
     function updateChartsColors(isDarkMode) {
         const colors = isDarkMode ? darkModeColors : lightModeColors;
         document.querySelectorAll('.chart').forEach(chart => {
@@ -226,6 +243,8 @@
             });
         });
     }
+
+    window.onload = loadTickers;
 </script>
 </body>
 </html>

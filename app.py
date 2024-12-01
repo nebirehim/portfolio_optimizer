@@ -7,6 +7,16 @@ import json
 import plotly
 import numpy as np
 
+class SP500Fetcher:
+    @staticmethod
+    def fetch_sp500_tickers():
+        # URL for Wikipedia's S&P 500 constituents
+        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        tables = pd.read_html(url)
+        sp500_table = tables[0]  # First table contains the data we need
+        tickers = sp500_table['Symbol'].tolist()
+        return tickers
+
 class StockDataFetcher:
     @staticmethod
     def fetch_data(tickers, start_date, end_date):
@@ -130,6 +140,13 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+@app.route('/get_sp500_tickers', methods=['GET'])
+def get_sp500_tickers():
+    try:
+        tickers = SP500Fetcher.fetch_sp500_tickers()
+        return jsonify(tickers=tickers)
+    except Exception as e:
+        return jsonify(error=str(e)), 400
 
 @app.route('/optimize', methods=['POST'])
 def optimize():
