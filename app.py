@@ -37,6 +37,8 @@ class PortfolioOptimizer:
             weights = port.optimization(model='Classic', rm='CVaR', obj='Sharpe')
         elif model == 'MAD':
             weights = port.optimization(model='Classic', rm='MAD', obj='Sharpe')
+        elif model == 'MDD':
+            weights = port.optimization(model='Classic', rm='MDD', obj='Sharpe')
         else:
             raise ValueError("Invalid model selected.")
         
