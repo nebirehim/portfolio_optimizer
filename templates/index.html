@@ -3,160 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Optimizer</title>
+    <title>Portfolio Optimization Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
-            background-color: #f9f9f9; /* Light mode default */
-            color: #333; /* Light mode text color */
             font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .container {
             padding: 20px;
-            transition: background-color 0.5s, color 0.5s;
-        }
-        h1 {
-            color: inherit; /* Use current text color */
-        }
-        form {
-            background-color: #ffffff; /* Light mode form background */
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            transition: background-color 0.5s;
-        }
-        #price-graph, #weights-graph, #frontier-graph {
-            margin-top: 20px;
-        }
-        .error {
-            color: red;
-            margin-top: 20px;
-        }
-        .toggle-container {
-            margin-bottom: 20px;
         }
         .dark-mode {
-            background-color: #1e1e1e; /* Dark mode background */
-            color: #f0f0f0; /* Dark mode text color */
+            background-color: #121212;
+            color: white;
         }
-        .dark-mode form {
-            background-color: #2e2e2e; /* Dark mode form background */
+        .input-section, .output-section {
+            margin-bottom: 30px;
         }
-        .dark-mode .error {
-            color: #ff5555; /* Dark mode error color */
+        .input-section label, .output-section h3 {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #toggle-dark-mode {
+            margin-bottom: 20px;
+        }
+        .date-options button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        #charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .chart {
+            flex: 1 1 45%;
+            border: 1px solid #ddd;
+            padding: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="toggle-container">
-        <label for="mode-toggle">
-            <input type="checkbox" id="mode-toggle" onchange="toggleMode()"> Dark Mode
-        </label>
+<div class="container">
+    <button id="toggle-dark-mode">Toggle Dark Mode</button>
+
+    <div class="input-section">
+        <label for="tickers-input">Enter Tickers (comma-separated):</label>
+        <input type="text" id="tickers-input" placeholder="AAPL, MSFT, TSLA">
+
+        <label>Select Date Range:</label>
+        <div class="date-options">
+            <button data-range="1y">1 Year</button>
+            <button data-range="5y">5 Years</button>
+            <button data-range="10y">10 Years</button>
+            <button data-range="all">All</button>
+        </div>
+
+        <label for="start-date">Start Date:</label>
+        <input type="date" id="start-date">
+
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date">
+
+        <label>Select Portfolio Model:</label>
+        <div>
+            <label><input type="radio" name="model" value="MV" checked> Mean-Variance</label>
+            <label><input type="radio" name="model" value="MAD"> Mean-Absolute Deviation</label>
+            <label><input type="radio" name="model" value="MDD"> Maximum Drawdown</label>
+            <label><input type="radio" name="model" value="CVaR"> Conditional Value at Risk</label>
+        </div>
+
+        <button id="optimize-btn">Optimize Portfolio</button>
     </div>
 
-    <h1>Portfolio Optimization Tool</h1>
-    <form id="portfolio-form">
-        <label for="tickers">Stock Tickers (comma-separated):</label>
-        <input type="text" id="tickers" placeholder="AAPL,MSFT,GOOG" required>
-        <br>
-        <label for="date-range">Select Date Range:</label>
-        <select id="date-range">
-            <option value="1y">Last 1 Year</option>
-            <option value="5y">Last 5 Years</option>
-            <option value="max">Maximum Available Data</option>
-        </select>
-        <br>
-        <label for="model">Model:</label>
-        <select id="model">
-            <option value="MV">Mean-Variance</option>
-            <option value="CVaR">CVaR</option>
-            <option value="MAD">Mean Absolute Deviation</option>
-            <option value="ERC">Equal Risk Contribution</option>
-            <option value="RP">Risk Parity</option>
-        </select>
-        <br>
-        <button type="submit">Optimize Portfolio</button>
-    </form>
+    <div class="output-section">
+        <h3>Portfolio Weights</h3>
+        <table id="weights-table">
+            <thead>
+            <tr>
+                <th>Asset</th>
+                <th>Weight</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Dynamic rows will be added here -->
+            </tbody>
+        </table>
 
-    <div id="price-graph"></div>
-    <div id="weights-graph"></div>
-    <div id="frontier-graph"></div>
-    <div id="error-message" class="error"></div>
+        <h3>Charts</h3>
+        <div id="charts-container">
+            <div class="chart" id="price-graph"></div>
+            <div class="chart" id="weights-graph"></div>
+            <div class="chart" id="frontier-graph"></div>
+        </div>
+    </div>
+</div>
 
-    <script>
-        function toggleMode() {
-            const isDarkMode = document.body.classList.toggle('dark-mode');
-            const graphs = [document.getElementById('price-graph'), 
-                            document.getElementById('weights-graph'), 
-                            document.getElementById('frontier-graph')];
-            graphs.forEach(graph => {
-                if (graph.data) {
-                    // Update the graph background based on current mode
-                    const backgroundColor = isDarkMode ? 'rgba(40, 40, 40, 1)' : 'rgba(240, 240, 240, 0.9)';
-                    const textColor = isDarkMode ? '#FFF' : '#000';
-                    Plotly.relayout(graph, {
-                        'plot_bgcolor': backgroundColor,
-                        'paper_bgcolor': backgroundColor,
-                        'font.color': textColor
-                    });
-                }
-            });
-        }
+<script>
+    const darkModeColors = {
+        background: '#121212',
+        text: '#FFFFFF',
+    };
+    const lightModeColors = {
+        background: '#FFFFFF',
+        text: '#000000',
+    };
 
-        document.getElementById('portfolio-form').onsubmit = async function (e) {
-            e.preventDefault();
+    document.getElementById('toggle-dark-mode').addEventListener('click', function () {
+        const body = document.body;
+        body.classList.toggle('dark-mode');
+        const isDarkMode = body.classList.contains('dark-mode');
+        updateChartsColors(isDarkMode);
+    });
 
-            const tickers = document.getElementById('tickers').value.split(',').map(ticker => ticker.trim());
-            const dateRange = document.getElementById('date-range').value; // Get the selected date range
-            const model = document.getElementById('model').value;
-            const is_dark_mode = document.body.classList.contains('dark-mode'); // Check if dark mode is active
-
-            // Calculate the start and end dates based on the selected range
+    document.querySelectorAll('.date-options button').forEach(button => {
+        button.addEventListener('click', function () {
+            const range = this.dataset.range;
             const endDate = new Date();
             let startDate;
 
-            if (dateRange === '1y') {
-                startDate = new Date();
-                startDate.setFullYear(endDate.getFullYear() - 1);
-            } else if (dateRange === '5y') {
-                startDate = new Date();
-                startDate.setFullYear(endDate.getFullYear() - 5);
-            } else if (dateRange === 'max') {
-                startDate = null; // No start date needed for maximum available data
+            switch (range) {
+                case '1y':
+                    startDate = new Date();
+                    startDate.setFullYear(endDate.getFullYear() - 1);
+                    break;
+                case '5y':
+                    startDate = new Date();
+                    startDate.setFullYear(endDate.getFullYear() - 5);
+                    break;
+                case '10y':
+                    startDate = new Date();
+                    startDate.setFullYear(endDate.getFullYear() - 10);
+                    break;
+                case 'all':
+                    startDate = new Date('1970-01-01');
+                    break;
             }
 
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+        });
+    });
+
+    document.getElementById('optimize-btn').addEventListener('click', async function () {
+        const tickers = document.getElementById('tickers-input').value.split(',').map(t => t.trim());
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const model = document.querySelector('input[name="model"]:checked').value;
+        const isDarkMode = document.body.classList.contains('dark-mode');
+
+        if (!tickers.length || !startDate || !endDate) {
+            alert('Please fill in all fields!');
+            return;
+        }
+
+        const payload = { tickers, start_date: startDate, end_date: endDate, model, is_dark_mode: isDarkMode };
+
+        try {
             const response = await fetch('/optimize', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    tickers,
-                    start_date: startDate ? startDate.toISOString().split('T')[0] : null, // Send null if max
-                    end_date: endDate.toISOString().split('T')[0],
-                    model,
-                    is_dark_mode
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
-            const data = await response.json();
-
-            // Check for errors in the response
-            if (data.error) {
-                document.getElementById('error-message').innerText = data.error;
+            if (!response.ok) {
+                const error = await response.json();
+                alert(`Error: ${error.error}`);
                 return;
             }
 
-            // Clear any previous error messages
-            document.getElementById('error-message').innerText = '';
+            const result = await response.json();
+            const priceGraph = JSON.parse(result.price_graph);
+            const weightsGraph = JSON.parse(result.weights_graph);
+            const frontierGraph = JSON.parse(result.frontier_graph);
 
-            // Plot price graph
-            Plotly.newPlot('price-graph', JSON.parse(data.price_graph));
+            // Add portfolio model names to frontier graph
+            frontierGraph.layout.annotations = result.portfolio_annotations;
 
-            // Plot weights pie chart
-            Plotly.newPlot('weights-graph', JSON.parse(data.weights_graph));
+            // Render graphs
+            Plotly.newPlot('price-graph', priceGraph.data, priceGraph.layout);
+            Plotly.newPlot('weights-graph', weightsGraph.data, weightsGraph.layout);
+            Plotly.newPlot('frontier-graph', frontierGraph.data, frontierGraph.layout);
 
-            // Plot efficient frontier graph
-            Plotly.newPlot('frontier-graph', JSON.parse(data.frontier_graph));
-        };
-    </script>
+            // Update weights table
+            const weightsTable = document.getElementById('weights-table').getElementsByTagName('tbody')[0];
+            weightsTable.innerHTML = '';
+            Object.entries(result.weights).forEach(([ticker, weight]) => {
+                const row = `<tr><td>${ticker}</td><td>${(weight * 100).toFixed(2)}%</td></tr>`;
+                weightsTable.innerHTML += row;
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while optimizing the portfolio. Check the console for details.');
+        }
+    });
+
+    function updateChartsColors(isDarkMode) {
+        const colors = isDarkMode ? darkModeColors : lightModeColors;
+        document.querySelectorAll('.chart').forEach(chart => {
+            Plotly.relayout(chart.id, {
+                paper_bgcolor: colors.background,
+                plot_bgcolor: colors.background,
+                font: { color: colors.text },
+            });
+        });
+    }
+</script>
 </body>
 </html>
