@@ -116,6 +116,7 @@
             <div class="chart" id="price-graph"></div>
             <div class="chart" id="weights-graph"></div>
             <div class="chart" id="frontier-graph"></div>
+            <div class="chart" id="correlation-graph"></div>
         </div>
     </div>
 </div>
@@ -198,11 +199,14 @@
             const priceGraph = JSON.parse(result.price_graph);
             const weightsGraph = JSON.parse(result.weights_graph);
             const frontierGraph = JSON.parse(result.frontier_graph);
+            const correlationGraph = JSON.parse(result.correlation_graph);
+
 
             // Render graphs
             Plotly.newPlot('price-graph', priceGraph.data, priceGraph.layout);
             Plotly.newPlot('weights-graph', weightsGraph.data, weightsGraph.layout);
             Plotly.newPlot('frontier-graph', frontierGraph.data, frontierGraph.layout);
+            Plotly.newPlot('correlation-graph', correlationGraph.data, correlationGraph.layout);
 
             // Update weights table
             const weightsTable = document.getElementById('weights-table').getElementsByTagName('tbody')[0];

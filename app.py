@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+from plotly.subplots import make_subplots
 import yfinance as yf
 import pandas as pd
 import riskfolio as rp
@@ -148,6 +149,7 @@ def get_sp500_tickers():
     except Exception as e:
         return jsonify(error=str(e)), 400
 
+
 @app.route('/optimize', methods=['POST'])
 def optimize():
     data = request.json
@@ -165,19 +167,54 @@ def optimize():
         optimizer = PortfolioOptimizer(stock_data)
         weights = optimizer.optimize(model)
 
-        # Generate plots
+        # Correlation Matrix
+        correlation_matrix = stock_data.pct_change().dropna().corr()
+
+        # Create text for the heatmap (correlation values as strings)
+        text_matrix = correlation_matrix.applymap(lambda x: f'{x:.2%}' if pd.notnull(x) else '')
+
+        # Plot correlation matrix
+        correlation_fig = go.Figure(data=go.Heatmap(
+            z=correlation_matrix.values,
+            x=correlation_matrix.columns,
+            y=correlation_matrix.index,
+            colorscale='Viridis',
+            colorbar=dict(title='Correlation'),
+            text=text_matrix.values,  # Set the correlation coefficient values as text
+            hoverinfo='text',  # Display the text (correlation coefficients) on hover
+            hoverongaps=False  # Avoid gaps showing on hover
+        ))
+
+        correlation_fig.update_layout(
+            title='Correlation Matrix',
+            xaxis=dict(title='Assets'),
+            yaxis=dict(title='Assets'),
+            plot_bgcolor='rgba(240,240,240,0.9)' if not is_dark_mode else 'rgba(40,40,40,1)',
+            font=dict(color='#000' if not is_dark_mode else '#FFF'),
+            xaxis_tickangle=45,
+            yaxis_tickangle=-45
+        )
+
+        # Convert the correlation graph to JSON for rendering
+        correlation_graph_json = json.dumps(correlation_fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+        # Generate other plots (e.g., performance and efficient frontier)
         price_fig, weights_fig = PlotGenerator.plot_performance(stock_data, weights, is_dark_mode)
         frontier_fig = optimizer.plot_efficient_frontier(is_dark_mode)
 
-        # Convert figures to JSON for rendering
+        # Convert other figures to JSON for rendering
         price_graph_json = json.dumps(price_fig, cls=plotly.utils.PlotlyJSONEncoder)
         weights_graph_json = json.dumps(weights_fig, cls=plotly.utils.PlotlyJSONEncoder)
         frontier_graph_json = json.dumps(frontier_fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-        return jsonify(weights=weights.to_dict(), price_graph=price_graph_json,
-                       weights_graph=weights_graph_json, frontier_graph=frontier_graph_json)
+        return jsonify(weights=weights.to_dict(),
+                       price_graph=price_graph_json,
+                       weights_graph=weights_graph_json,
+                       frontier_graph=frontier_graph_json,
+                       correlation_graph=correlation_graph_json)
     except Exception as e:
         return jsonify(error=str(e)), 400
+
 
 
 if __name__ == "__main__":
