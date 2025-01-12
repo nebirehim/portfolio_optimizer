@@ -1,19 +1,21 @@
-# Use the official Python image as the base image
 FROM python:3.9-slim
 
-# Set the working directory in the container
+# Install system dependencies for certain Python packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libatlas-base-dev \
+    gfortran
+
 WORKDIR /app
 
-# Copy the app and requirements.txt to the container
-COPY app.py /app/
-COPY requirements.txt /app/
+# Copy the entire current directory (including app.py and requirements.txt) to the container
+COPY . .
 
-# Install Python dependencies
-RUN pip install -r requirements.txt
+# Install the dependencies from requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port the app runs on
+# Expose the default port for Streamlit
 EXPOSE 8501
 
 # Command to run the Streamlit app
-ENTRYPOINT [ "streamlit", "run" ]
-CMD [ "app/app.py" ]
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
