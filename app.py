@@ -19,12 +19,23 @@ class SP500Fetcher:
 class StockDataFetcher:
     @staticmethod
     def fetch_data(tickers, start_date, end_date):
-        data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
-        if isinstance(data, pd.Series):
-            data = data.to_frame()
-        if data.empty:
-            raise ValueError("No data fetched. Check tickers or date range.")
+        # Fetch data
+        data = yf.download(tickers, start=start_date, end=end_date, progress=False)
+        
+        # Check if 'Adj Close' exists, otherwise use 'Close'
+        if 'Adj Close' in data.columns:
+            data = data['Adj Close']
+        elif 'Close' in data.columns:
+            data = data['Close']
+        else:
+            raise ValueError(f"No price data found for tickers {tickers} in the given date range.")
+        
+        # Handle case where data is empty or contains NaNs
+        if data.empty or data.isnull().all().all():
+            raise ValueError(f"No data fetched for tickers {tickers} in the given date range.")
+        
         return data
+
 
 # Class for portfolio optimization
 class PortfolioOptimizer:
