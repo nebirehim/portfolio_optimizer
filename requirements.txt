@@ -2,5 +2,5 @@ numpy==1.25.2
 pandas==1.5.3
 plotly==5.15.0
 Riskfolio-Lib==4.4.2
-yfinance==0.2.20
+yfinance==0.2.54
 streamlit==1.25.0
